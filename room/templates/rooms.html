@@ -1,0 +1,29 @@
+{%extends 'base.html'%} {%block body%}
+<div class="container mt-5">
+    <div class="row">
+      {% for i in room %}
+      <div class="col-6 mt-4">
+        <div class="card h-100 ">
+            <img class="card-img-top w-100" src="{{ i.img.url }}" data-holder-rendered="true" height="400px" />
+            <div class="card-body d-flex flex-column">
+                <h4 class="card-title">{{ i.name }}</h4>
+                <p class="card-text flex-grow-1">
+                    {{ i.desc }}
+                </p>
+                <div class="mt-auto text-center">
+                    <a href="{% url 'room' i.slug %}" class="btn btn-lg rounded-4 px-4 btn-warning mb-2">Join</a>
+
+                </div>
+            </div>
+        </div>
+    </div>
+      {% endfor %}
+           <!-- Apply btn-sm class for smaller size -->
+
+      </div>
+    </div>
+  </div>
+  
+{%endblock%}
+{%block script%}
+{%endblock%}

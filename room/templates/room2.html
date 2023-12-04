@@ -1,0 +1,135 @@
+{%extends 'base.html'%}
+{%load static%}
+{%block css%}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="{%static 'css/room.css'%}">
+<style>
+   .card {
+      max-height: 70vh; /* Set a maximum height for the chat container */
+      overflow-y: auto; /* Enable vertical scrolling when content overflows */
+    }
+</style>
+
+{%endblock%}
+{%block body%}
+<div class="container text-center ">
+    <h1>{{room.name}}</h1>
+  </div>
+<div class="container d-flex justify-content-center vh-50">
+    <div class="card w-50 ">
+      <div class="d-flex flex-row justify-content-between p-3 text-white adiv" >
+        <i class="fas fa-chevron-left"></i>
+        <span class="fs-5 mb-4">Live chat</span>
+        <i class="fas fa-times"></i>
+      </div>
+      <div id="chat-messages">
+        {% for message in messages %}
+          {% if message.user.username == request.user.username %}
+            <!-- If the message is from the logged-in user, align to the right -->
+            <div class="d-flex flex-row justify-content-end mb-4">
+              <div class="p-3 me-3 border" style="border-radius: 15px; background-color: #fbfbfb;">
+                <p class="small mb-1">{{ message.user.username }}</p>
+                <p class="small mb-0">{{ message.content }}</p>
+              </div>
+              <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava2-bg.webp" alt="avatar 1" style="width: 45px; height: 100%;">
+            </div>
+          {% else %}
+            <!-- If the message is from others, align to the left -->
+            <div class="d-flex flex-row mb-4">
+              <img src="https://img.icons8.com/color/48/000000/circled-user-female-skin-type-7.png" width="30" height="30">
+              <div class="message-container">
+                <div class="message-header d-flex justify-content-between">
+                  <p class="small mb-1">{{ message.user.username }}</p>
+                  <p class="small mb-1 ms-3">{{ message.date_added }}</p>
+                </div>
+                <div class="message-content p-3 border" style="border-radius: 15px; background-color: #fbfbfb;">
+                  <p class="small mb-0">{{ message.content }}</p>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <div class="form-outline">
+        <div class="d-flex">
+          <textarea id="chat-message-input" class="form-control-lg mb-5 mx-3 w-100" rows="5" placeholder="Type your message..."></textarea>
+          <div class="mt-3 mx-2">
+            <button type="submit" class="btn btn-primary btn-sm" id="chat-message-submit">
+              <i class="bi bi-send"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+    </div>
+  </div>
+
+  {%endblock%} {%block scripts%} {{ room.slug|json_script:"json-roomname" }}
+{{request.user.username|json_script:"json-username"}}
+
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script>
+  const roomName = JSON.parse($("#json-roomname").text());
+  const userName = JSON.parse($("#json-username").text());
+
+  const chatSocket = new WebSocket(
+    "ws://" + window.location.host + "/ws/" + roomName + "/"
+  );
+
+  chatSocket.onmessage = function (e) {
+  const data = JSON.parse(e.data);
+  if (data.message) {
+    let html;
+
+    if (data.username === '{{ request.user.username }}') {
+      // Message from the logged-in user, render on the right side
+      html = '<div class="d-flex flex-row justify-content-end mb-4">';
+      html += '<div class="p-3 me-3 border" style="border-radius: 15px; background-color: #fbfbfb;">';
+      html += '<p class="small mb-1">' + data.username + '</p>';
+      html += '<p class="small mb-0">' + data.message + '</p></div>';
+      html += '<img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava2-bg.webp" alt="avatar 1" style="width: 45px; height: 100%;"></div>';
+    } else {
+      // Message from another user, render on the left side
+      html = '<div class="d-flex flex-row mb-4">';
+      html += '<img src="https://img.icons8.com/color/48/000000/circled-user-female-skin-type-7.png" width="30" height="30">';
+      html += '<div class="message-container">';
+      html += '<div class="message-header d-flex justify-content-between">';
+      html += '<p class="small mb-1">' + data.username + '</p>';
+      html += '<p class="small mb-1 ms-3">' + new Date().toLocaleTimeString() + '</p>'; // You can customize the date format
+      html += '</div>';
+      html += '<div class="message-content p-3 border" style="border-radius: 15px; background-color: #fbfbfb;">';
+      html += '<p class="small mb-0">' + data.message + '</p>';
+      html += '</div></div></div>';
+    }
+
+    const chatMessages = document.querySelector("#chat-messages");
+    chatMessages.innerHTML += html;
+    chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to the bottom of the chat
+  } else {
+    alert("the message is empty");
+  }
+};
+
+
+  chatSocket.onclose = function (e) {
+    console.log("closed");
+  };
+
+  // Rest of your code...
+  document.querySelector("#chat-message-submit").onclick = function (e) {
+    e.preventDefault();
+    const messageInputDom = document.querySelector("#chat-message-input");
+    const message = messageInputDom.value;
+    chatSocket.send(
+      JSON.stringify({
+        message: message,
+        username: userName,
+        room: roomName,
+      })
+    );
+    messageInputDom.value = "";
+    return false;
+  };
+</script>
+{%endblock%}
